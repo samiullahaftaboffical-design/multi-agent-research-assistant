@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Load .env only if it exists (local dev). In production, env vars are set directly.
 load_dotenv()
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-Model="gemini-2.5-flash"
+Model="gemini-2.5-flash-lite"
 
 def call_agents(role,task_description,input_text=None):
     model=genai.GenerativeModel(Model)
