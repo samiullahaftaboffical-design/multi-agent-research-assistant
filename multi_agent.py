@@ -1,19 +1,20 @@
-import time
 import os
-import google.generativeai as genai
+import time
+import re
+from openai import OpenAI
 from dotenv import load_dotenv
 
-# Load .env only if it exists (local dev). In production, env vars are set directly.
 load_dotenv()
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-Model="gemini-2.5-flash-lite"
+
+client = OpenAI(
+    api_key=os.environ.get("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com"
+)
+Model = "deepseek-chat"
 
 def call_agents(role, task_description, input_text=None):
-    model = genai.GenerativeModel(Model)
-
     if input_text:
-        prompt = f"""
-You are a {role}.
+        prompt = f"""You are a {role}.
 {task_description}
 
 Here is the information to work with:
@@ -21,43 +22,36 @@ Here is the information to work with:
 {input_text}
 ---
 
-Provide your output now. Be thorough and professional.
-"""
+Provide your output now. Be thorough and professional."""
     else:
-        prompt = f"""
-You are a {role}.
+        prompt = f"""You are a {role}.
 {task_description}
 
-Provide your output now. Be thorough and professional.
-"""
+Provide your output now. Be thorough and professional."""
 
     max_retries = 2
     for attempt in range(max_retries):
         try:
-            time.sleep(2)   # small initial delay to avoid bursts
-            response = model.generate_content(prompt)
-            return response.text
+            time.sleep(1)   # gentle pacing
+            response = client.chat.completions.create(
+                model=Model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=4096
+            )
+            return response.choices[0].message.content
         except Exception as e:
             error_str = str(e)
-            # If it's a quota error, wait the suggested time and retry
-            if "ResourceExhausted" in error_str and "retry_delay" in error_str:
-                # Extract the seconds from the error message
-                import re
-                match = re.search(r"retry_delay\s*\{\s*seconds:\s*(\d+)", error_str)
-                if match:
-                    wait_time = int(match.group(1))
-                    print(f"Rate limited. Waiting {wait_time} seconds...")
-                    time.sleep(wait_time + 2)   # extra 2 sec to be safe
-                else:
-                    time.sleep(30)   # fallback
+            if "Rate limit" in error_str or "quota" in error_str.lower():
+                print(f"Rate limited. Waiting 30 seconds...")
+                time.sleep(30)
             elif attempt == max_retries - 1:
-                # Last attempt failed – re-raise the exception
                 raise e
             else:
-                time.sleep(10)   # general error backoff
-
-    # If all retries fail, raise an error
-    raise Exception("Failed to get response after retries")
+                time.sleep(10)
+    raise Exception("Failed after retries")
 
 def run_research(topic):
     print(f"\n{'='*60}")
