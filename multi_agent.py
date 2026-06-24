@@ -8,11 +8,11 @@ load_dotenv()
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 Model="gemini-2.5-flash-lite"
 
-def call_agents(role,task_description,input_text=None):
-    model=genai.GenerativeModel(Model)
+def call_agents(role, task_description, input_text=None):
+    model = genai.GenerativeModel(Model)
 
     if input_text:
-        prompt=f"""
+        prompt = f"""
 You are a {role}.
 {task_description}
 
@@ -30,9 +30,34 @@ You are a {role}.
 
 Provide your output now. Be thorough and professional.
 """
-    time.sleep(2)
-    response=model.generate_content(prompt)
-    return response.text
+
+    max_retries = 2
+    for attempt in range(max_retries):
+        try:
+            time.sleep(2)   # small initial delay to avoid bursts
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            error_str = str(e)
+            # If it's a quota error, wait the suggested time and retry
+            if "ResourceExhausted" in error_str and "retry_delay" in error_str:
+                # Extract the seconds from the error message
+                import re
+                match = re.search(r"retry_delay\s*\{\s*seconds:\s*(\d+)", error_str)
+                if match:
+                    wait_time = int(match.group(1))
+                    print(f"Rate limited. Waiting {wait_time} seconds...")
+                    time.sleep(wait_time + 2)   # extra 2 sec to be safe
+                else:
+                    time.sleep(30)   # fallback
+            elif attempt == max_retries - 1:
+                # Last attempt failed – re-raise the exception
+                raise e
+            else:
+                time.sleep(10)   # general error backoff
+
+    # If all retries fail, raise an error
+    raise Exception("Failed to get response after retries")
 
 def run_research(topic):
     print(f"\n{'='*60}")
