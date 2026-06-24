@@ -129,9 +129,12 @@ async def home():
 
 @app.post("/research")
 async def research(topic: str = Form(...)):
-    loop = asyncio.get_running_loop()
-    report = await loop.run_in_executor(executor, run_research, topic)
-    return {"report": report}
+    try:
+        loop = asyncio.get_running_loop()
+        report = await loop.run_in_executor(executor, run_research, topic)
+        return {"report": report}
+    except Exception as e:
+        return {"report": f"⚠️ The AI agents are temporarily unavailable. Please try again later.\n\n({str(e)})"}
 
 if __name__ == "__main__":
     import uvicorn

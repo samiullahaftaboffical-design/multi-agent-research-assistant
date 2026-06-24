@@ -1,3 +1,4 @@
+import time
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -5,7 +6,7 @@ from dotenv import load_dotenv
 # Load .env only if it exists (local dev). In production, env vars are set directly.
 load_dotenv()
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-Model="gemini-2.5-flash"
+Model="gemini-2.5-flash-lite"
 
 def call_agents(role,task_description,input_text=None):
     model=genai.GenerativeModel(Model)
@@ -29,6 +30,7 @@ You are a {role}.
 
 Provide your output now. Be thorough and professional.
 """
+    time.sleep(2)
     response=model.generate_content(prompt)
     return response.text
 
