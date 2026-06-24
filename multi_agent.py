@@ -10,7 +10,7 @@ client = OpenAI(
     api_key=os.environ.get("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
 )
-Model = "llama-3.1-8b-instant"
+Model = "openai/gpt-oss-120b"
 
 def call_agents(role, task_description, input_text=None):
     if input_text:
